@@ -1,0 +1,65 @@
+{
+  "name": "Database Setup",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "38297dcb-3fd5-45a6-bec0-e4b2b8861460",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "ALTER TABLE leads\nADD COLUMN IF NOT EXISTS industry TEXT,\nADD COLUMN IF NOT EXISTS summary TEXT,\nADD COLUMN IF NOT EXISTS services TEXT,\nADD COLUMN IF NOT EXISTS ideal_customer TEXT,\nADD COLUMN IF NOT EXISTS company_size TEXT,\nADD COLUMN IF NOT EXISTS buying_intent TEXT,\nADD COLUMN IF NOT EXISTS recommended_service TEXT,\nADD COLUMN IF NOT EXISTS score INTEGER,\nADD COLUMN IF NOT EXISTS reason TEXT,\nADD COLUMN IF NOT EXISTS processed_at TIMESTAMP;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "01a1f166-8f07-4a0e-b131-81fca48ce28e",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "SOjUjMjDF5mVuILK",
+          "name": "Postgres account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c49106ea-81b9-4105-a757-f7feca86c4d5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d34dd12a0490352c9f09ebb59e0cea47edc60b2f37096b67b423756066a737d5"
+  },
+  "nodeGroups": [],
+  "id": "N5vY0XNM2sVLo6c3",
+  "tags": []
+}

@@ -1,0 +1,215 @@
+{
+  "name": "Upload leads",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Lead Upload",
+        "formDescription": "Upload your business leads CSV",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "CSV File",
+              "fieldType": "file",
+              "fieldName": "csv_file",
+              "acceptFileTypes": ".csv",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "12f2a0d1-0025-4bd8-80cc-a7c3a41203c1",
+      "name": "On form submission",
+      "webhookId": "82926499-9659-4fec-b46a-881a89ee5cb5"
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "csv_file",
+        "options": {
+          "delimiter": ",",
+          "encoding": "utf-8",
+          "headerRow": true
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "285b6643-3bb2-4371-a27f-45fa695016e8",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads",
+          "mode": "list",
+          "cachedResultName": "leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "business_name": "={{$json[\"Place name100% title\"]}}",
+            "website": "={{$json[\"Website52% website\"]}}",
+            "phone": "={{$json[\"Phone100% phone\"]}}",
+            "status": "NEW"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "business_name",
+              "displayName": "business_name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "instagram",
+              "displayName": "instagram",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        0
+      ],
+      "id": "ba50c58b-b4df-4510-8e8b-e3d43eaa5ac3",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "SOjUjMjDF5mVuILK",
+          "name": "Postgres account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "ae753daa-4bf6-49a7-b575-a4df15200f77",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d34dd12a0490352c9f09ebb59e0cea47edc60b2f37096b67b423756066a737d5"
+  },
+  "nodeGroups": [],
+  "id": "DWFoEovM7eqNehld",
+  "tags": []
+}

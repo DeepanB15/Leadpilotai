@@ -1,0 +1,334 @@
+{
+  "name": "Lead Intelligence",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6f702cef-2d42-425c-9bb4-fe13e8b19910",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    id,\n    business_name,\n    instagram,\n    website,\n    email,\n    phone,\n    status,\n    created_at\nFROM leads\nWHERE status = 'NEW'\n  AND website IS NOT NULL\n  AND TRIM(website) <> ''\nORDER BY created_at ASC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        176,
+        -80
+      ],
+      "id": "583e73f3-5081-4f45-98b5-c7b5ab648590",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "SOjUjMjDF5mVuILK",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{$json.website}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/138 Safari/537.36"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        528,
+        0
+      ],
+      "id": "b0b535bb-fbd3-4073-ae9d-0aebe9f8de2d",
+      "name": "HTTP Request",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const html = $json.data || \"\";\n\n// ---------------- TITLE ----------------\nconst title =\n  html.match(/<title[^>]*>(.*?)<\\/title>/is)?.[1]?.trim() || \"\";\n\n// ---------------- DESCRIPTION ----------------\nconst description =\n  html.match(\n    /<meta[^>]*name=[\"']description[\"'][^>]*content=[\"']([^\"]+)[\"']/i\n  )?.[1]?.trim() || \"\";\n\n// ---------------- BODY ----------------\nlet body =\n  html.match(/<body[^>]*>([\\s\\S]*?)<\\/body>/i)?.[1] || html;\n\n// Remove unwanted tags\nbody = body\n  .replace(/<script[\\s\\S]*?<\\/script>/gi, \"\")\n  .replace(/<style[\\s\\S]*?<\\/style>/gi, \"\")\n  .replace(/<noscript[\\s\\S]*?<\\/noscript>/gi, \"\")\n  .replace(/<!--[\\s\\S]*?-->/g, \"\");\n\n// Strip HTML\nbody = body\n  .replace(/<[^>]+>/g, \" \")\n  .replace(/&nbsp;/g, \" \")\n  .replace(/&amp;/g, \"&\")\n  .replace(/&#8217;/g, \"'\")\n  .replace(/&#8220;/g, '\"')\n  .replace(/&#8221;/g, '\"')\n  .replace(/\\s+/g, \" \")\n  .trim();\n\n// If body is empty, fall back to title + description\nlet content = body;\n\nif (content.length < 100) {\n  content = `${title}. ${description}`;\n}\n\n// Limit for LLM\ncontent = content.substring(0, 4000);\n\nconst { data, ...rest } = $json;\n\nreturn {\n  json: {\n    ...rest,\n    title,\n    description,\n    content\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        0
+      ],
+      "id": "cbc61ae0-91aa-4aca-89aa-ffdf4beb99f3",
+      "name": "Code in JavaScript",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert B2B sales intelligence analyst.\n\nAnalyze the company's website information below.\n\nCompany Title:\n{{$json.title}}\n\nMeta Description:\n{{$json.description}}\n\nWebsite Content:\n{{$json.content}}\n\nYour task:\n\n1. Identify the company's industry.\n2. Write a concise 2-3 sentence summary of what the company does.\n3. List the company's main services.\n4. Identify the most likely ideal customer.\n5. Estimate company size using one of:\n   - Startup\n   - Small Business\n   - Small to Medium Enterprise (SME)\n   - Mid-Market\n   - Enterprise\n6. Determine the buying intent based on the website.\n7. Recommend ONE service from our company that would best fit this lead.\n8. Give a lead score from 0 to 100.\n9. Explain briefly why you assigned that score.\n\nIMPORTANT RULES\n\n• Use ONLY the supplied website information.\n• Infer reasonable conclusions when obvious from the content.\n• Do NOT invent products or services that are not mentioned.\n• If a field truly cannot be determined, return an empty string \"\".\n• services MUST always be an array.\n• score MUST always be a number.\n• Return ONLY valid JSON.\n• Do NOT use Markdown.\n• Do NOT wrap the response inside ```json.\n\nReturn exactly this JSON format:\n\n{\n  \"industry\": \"\",\n  \"summary\": \"\",\n  \"services\": [],\n  \"ideal_customer\": \"\",\n  \"company_size\": \"\",\n  \"buying_intent\": \"\",\n  \"recommended_service\": \"\",\n  \"score\": 0,\n  \"reason\": \"\"\n}",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1136,
+        0
+      ],
+      "id": "00463f52-75b0-4708-b41f-9c05d5806197",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "qwen:7b",
+        "options": {
+          "temperature": 0.2,
+          "topP": 0.9,
+          "repeatPenalty": 1.05
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        928,
+        224
+      ],
+      "id": "645f849f-40b8-4e24-a183-08b6ba9ee9b6",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "zxtJzGBPB567ui5T",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "if (!$json.text) {\n  throw new Error(\"No text returned from LLM\");\n}\n\nlet txt = $json.text.trim();\n\n// Remove ```json\ntxt = txt.replace(/^```json/i, \"\");\n\n// Remove ```\ntxt = txt.replace(/^```/, \"\");\ntxt = txt.replace(/```$/, \"\").trim();\n\n// Extract JSON portion\nconst first = txt.indexOf(\"{\");\nconst last = txt.lastIndexOf(\"}\");\n\nif (first === -1 || last === -1) {\n  throw new Error(\"No JSON found:\\n\" + txt);\n}\n\ntxt = txt.substring(first, last + 1);\n\nlet result;\n\ntry {\n  result = JSON.parse(txt);\n\n} catch (err) {\n\n  // Remove invalid backslashes\n  txt = txt.replace(/\\\\(?![\"\\\\/bfnrtu])/g, \"\");\n\n  result = JSON.parse(txt);\n}\n\n// ----------------------\n// Fix missing/null values\n// ----------------------\n\nresult.industry = result.industry ?? \"\";\nresult.summary = result.summary ?? \"\";\nresult.ideal_customer = result.ideal_customer ?? \"\";\nresult.company_size = result.company_size ?? \"\";\nresult.buying_intent = result.buying_intent ?? \"\";\nresult.recommended_service = result.recommended_service ?? \"\";\nresult.reason = result.reason ?? \"\";\n\nif (!Array.isArray(result.services)) {\n  result.services = [];\n}\n\nif (typeof result.score !== \"number\") {\n  result.score = 0;\n}\n\n// Remove duplicate services\nresult.services = [...new Set(result.services)];\n\n// Trim all string values\nresult.industry = result.industry.trim();\nresult.summary = result.summary.trim();\nresult.ideal_customer = result.ideal_customer.trim();\nresult.company_size = result.company_size.trim();\nresult.buying_intent = result.buying_intent.trim();\nresult.recommended_service = result.recommended_service.trim();\nresult.reason = result.reason.trim();\n\nreturn {\n  json: {\n    id: $('Execute a SQL query').item.json.id,\n    business_name: $('Execute a SQL query').item.json.business_name,\n    website: $('Execute a SQL query').item.json.website,\n    instagram: $('Execute a SQL query').item.json.instagram,\n    email: $('Execute a SQL query').item.json.email,\n    phone: $('Execute a SQL query').item.json.phone,\n\n    ...result\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        0
+      ],
+      "id": "6be6e765-1974-4dec-bbd8-66476cf91b9c",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let website = ($json.website || \"\").trim();\n\nif (\n  website &&\n  !website.startsWith(\"http://\") &&\n  !website.startsWith(\"https://\")\n) {\n  website = \"https://\" + website;\n}\n\nwebsite = website.replace(/\\s+/g, \"\");\nwebsite = website.replace(/\\/+$/, \"\");\n\nreturn {\n  json: {\n    ...$json,\n    website\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        0
+      ],
+      "id": "20a7e1dc-6072-4100-b755-6b52f4955507",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const title = ($json.title || \"\").trim();\nconst description = ($json.description || \"\").trim();\nconst content = ($json.content || \"\").trim();\n\nif (!title && !content) {\n  return {\n    json: {\n      ...$json,\n      skip: true,\n      reason: \"Empty website\"\n    }\n  };\n}\n\nreturn {\n  json: {\n    ...$json,\n    title,\n    description,\n    content,\n    skip: false,\n    reason: \"\"\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        0
+      ],
+      "id": "05036d4c-1d39-4549-83f0-968ba7752009",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE leads\nSET status = 'ANALYZED'\nWHERE id = '{{ $json.id }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1904,
+        0
+      ],
+      "id": "07dbb8a2-f55f-47f5-a196-46066edb0277",
+      "name": "Execute a SQL query1",
+      "credentials": {
+        "postgres": {
+          "id": "SOjUjMjDF5mVuILK",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM reports\nORDER BY created_at DESC\nLIMIT 5;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1696,
+        0
+      ],
+      "id": "ba4ff64f-1985-4a9b-8219-3886a68cb413",
+      "name": "Execute a SQL query2",
+      "credentials": {
+        "postgres": {
+          "id": "SOjUjMjDF5mVuILK",
+          "name": "Postgres account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query2": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "bedae152-6de6-4cee-ad3f-64f6a59e53a6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d34dd12a0490352c9f09ebb59e0cea47edc60b2f37096b67b423756066a737d5"
+  },
+  "nodeGroups": [],
+  "id": "WufHE7veCA24OA6p",
+  "tags": []
+}

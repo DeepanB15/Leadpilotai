@@ -1,0 +1,53 @@
+# Local development stack.
+#   cp .env.example .env   (fill in Supabase values)
+#   docker compose up --build
+# Optional profiles:
+#   --profile ollama   run Ollama in a container (otherwise point OLLAMA_BASE_URL at your host)
+#   --profile localdb  run a plain local Postgres instead of Supabase (auth.users is not available there,
+#                      so sign-in still needs a Supabase project)
+
+services:
+  backend:
+    build: ./backend
+    env_file: .env
+    ports: ["8000:8000"]
+    restart: unless-stopped
+
+  worker:
+    build: ./backend
+    env_file: .env
+    command: ["python", "-m", "app.workers.research_worker"]
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports: ["3000:3000"]
+    depends_on: [backend]
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    ports: ["11434:11434"]
+    volumes: ["ollama:/root/.ollama"]
+
+  db:
+    image: postgres:16
+    profiles: ["localdb"]
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: leadpilot
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+
+volumes:
+  ollama:
+  pgdata:

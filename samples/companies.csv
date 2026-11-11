@@ -1,0 +1,5 @@
+company_name,website,linkedin_url,instagram_url,youtube_url,industry
+Acme Software,acme.com,linkedin.com/company/acme,,,Software
+NovaTech,https://novatech.com,,instagram.com/novatech,,
+Duplicate of Acme,www.acme.com/about,,,,
+Bad URL,http://10.0.0.1,,,,
